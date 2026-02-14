@@ -18,6 +18,7 @@ const DUMMY_USERS: Record<string, { password: string }> = {
 
 function buildTokenResponse(accessToken: string, refreshToken: string) {
   const now = Math.floor(Date.now() / 1000);
+
   return {
     accessToken,
     accessTokenExpiresIn: now + ACCESS_TOKEN_EXPIRES_IN,
@@ -28,6 +29,7 @@ function buildTokenResponse(accessToken: string, refreshToken: string) {
 
 auth.post('/login', async (c) => {
   const body = await c.req.json<{ email: string; password: string }>();
+
   const user = DUMMY_USERS[body.email];
 
   if (!user || user.password !== body.password) {

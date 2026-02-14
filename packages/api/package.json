@@ -1,0 +1,18 @@
+{
+  "name": "@ssr-webview-jwt/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "scripts": {
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "@ssr-webview-jwt/eslint-config": "workspace:*",
+    "eslint": "^9.0.0",
+    "typescript": "^5.0.0"
+  },
+  "peerDependencies": {
+    "ky": "^1.14.3"
+  }
+}

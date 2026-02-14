@@ -1,4 +1,7 @@
+import type { JWTPayload } from '@ssr-webview-jwt/api';
+import { Api } from '@ssr-webview-jwt/api';
 import * as SecureStore from 'expo-secure-store';
+import { jwtDecode } from 'jwt-decode';
 import ky from 'ky';
 
 import { BASE_URL } from '../constants/url';
@@ -12,21 +15,36 @@ export const getRefreshToken = async () => {
   if (!refreshToken) return null;
 
   const response = await ky
-    .post(`${BASE_URL}/auth/refresh`, {
+    .post(`${BASE_URL}/refresh`, {
       headers: { Authorization: `Bearer ${refreshToken}` },
       retry: 0,
     })
     .json<{ accessToken: string; refreshToken: string }>();
 
-  return response;
+  const decodedAccessToken = jwtDecode<JWTPayload>(response.accessToken);
+  const decodedRefreshToken = jwtDecode<JWTPayload>(response.refreshToken);
+
+  console.log({
+    accessToken: response.accessToken,
+    accessTokenExpiresAt: decodedAccessToken.exp,
+    refreshToken: response.refreshToken,
+    refreshTokenExpiresAt: decodedRefreshToken.exp,
+  });
+
+  return {
+    accessToken: response.accessToken,
+    accessTokenExpiresAt: decodedAccessToken.exp,
+    refreshToken: response.refreshToken,
+    refreshTokenExpiresAt: decodedRefreshToken.exp,
+  };
 };
 
-export const api = ky.create({
+export const httpClient = ky.create({
   prefixUrl: BASE_URL,
   hooks: {
     beforeRequest: [
       async (request) => {
-        const token = await appBridge.getState().getToken();
+        const token = await appBridge.getState().getAccessToken();
 
         if (!token) {
           return;
@@ -46,10 +64,16 @@ export const api = ky.create({
 
         if (!refreshPromise) {
           const newToken = await getRefreshToken();
+
           if (!newToken) return response;
 
           appBridge.setState({
-            token: newToken,
+            token: {
+              accessToken: newToken.accessToken,
+              refreshToken: newToken.refreshToken,
+              accessTokenExpiresAt: newToken.accessTokenExpiresAt,
+              refreshTokenExpiresAt: newToken.refreshTokenExpiresAt,
+            },
           });
           refreshPromise = Promise.resolve(newToken.accessToken);
         }
@@ -66,3 +90,5 @@ export const api = ky.create({
     ],
   },
 });
+
+export const api = new Api(httpClient);
