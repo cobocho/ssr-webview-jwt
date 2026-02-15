@@ -7,7 +7,7 @@ const REFRESH_SECRET = new TextEncoder().encode(
   process.env.JWT_REFRESH_SECRET ?? 'refresh-secret-change-in-production',
 );
 
-export const ACCESS_TOKEN_EXPIRES_IN = 60 * 60;
+export const ACCESS_TOKEN_EXPIRES_IN = 10;
 export const REFRESH_TOKEN_EXPIRES_IN = 60 * 60 * 24 * 14;
 
 export interface TokenPayload extends JWTPayload {

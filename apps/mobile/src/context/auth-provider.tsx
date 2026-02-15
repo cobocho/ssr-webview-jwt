@@ -35,7 +35,6 @@ interface TokenResponse {
 interface AuthContextValue {
   initialized: boolean;
   isAuthenticated: boolean;
-  cookieVersion: number;
   login: (token: TokenResponse) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -111,31 +110,25 @@ async function refreshTokenWithRetry(): Promise<TokenResponse | null> {
 
 async function applyToken(
   tokenResponse: TokenResponse,
-  setToken: (token: {
-    accessToken: string;
-    accessTokenExpiresAt: number;
-    refreshToken: string;
-    refreshTokenExpiresAt: number;
-  }) => void,
+  setToken: (token: { accessToken: string; refreshToken: string }) => void,
 ): Promise<void> {
   setToken({
     accessToken: tokenResponse.accessToken,
-    accessTokenExpiresAt: tokenResponse.accessTokenExpiresAt,
     refreshToken: tokenResponse.refreshToken,
-    refreshTokenExpiresAt: tokenResponse.refreshTokenExpiresAt,
   });
   await syncCookies(tokenResponse);
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const token = useBridge(appBridge, (state) => state.token);
-  const setToken = useBridge(appBridge, (state) => state.setToken);
-  const getBridgeRefreshToken = useBridge(appBridge, (state) => state.getRefreshToken);
-  const clearToken = useBridge(appBridge, (state) => state.clearToken);
+  const { token, setToken, getRefreshToken, clearToken } = useBridge(appBridge, (state) => ({
+    token: state.token,
+    setToken: state.setToken,
+    clearToken: state.clearToken,
+    getRefreshToken: state.getRefreshToken,
+  }));
 
   const [initialized, setInitialized] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [cookieVersion, setCookieVersion] = useState(0);
 
   const hasBootstrapped = useRef(false);
   const skipNextSyncRef = useRef(false);
@@ -149,7 +142,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async (tokenResponse: TokenResponse) => {
       skipNextSyncRef.current = true;
       await applyToken(tokenResponse, setToken);
-      setCookieVersion((v) => v + 1);
       setIsAuthenticated(true);
     },
     [setToken],
@@ -171,7 +163,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       (async () => {
         try {
-          const storedRefreshToken = await getBridgeRefreshToken();
+          const storedRefreshToken = await getRefreshToken();
 
           if (!storedRefreshToken) {
             setInitialized(true);
@@ -183,7 +175,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (refreshedToken) {
             skipNextSyncRef.current = true;
             await applyToken(refreshedToken, setToken);
-            setCookieVersion((v) => v + 1);
             setIsAuthenticated(true);
           } else {
             console.warn('[Auth] Bootstrap refresh failed — clearing session');
@@ -197,7 +188,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       })();
     },
-    [setToken, clearSession, getBridgeRefreshToken],
+    [setToken, clearSession, getRefreshToken],
   );
 
   useEffect(
@@ -222,7 +213,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
 
           await syncCookies(token);
-          setCookieVersion((v) => v + 1);
           setIsAuthenticated(true);
           appBridge.setState({ token });
         } catch (error) {
@@ -254,8 +244,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [token?.refreshToken, handleRefresh]);
 
   const contextValue = useMemo(
-    () => ({ initialized, isAuthenticated, cookieVersion, login, logout }),
-    [initialized, isAuthenticated, cookieVersion, login, logout],
+    () => ({ initialized, isAuthenticated, login, logout }),
+    [initialized, isAuthenticated, login, logout],
   );
 
   return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;

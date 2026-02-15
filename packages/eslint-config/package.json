@@ -4,8 +4,18 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./base": "./base.js",
-    "./react": "./react.js"
+    "./base": {
+      "types": "./base.d.ts",
+      "default": "./base.js"
+    },
+    "./next": {
+      "types": "./next.d.ts",
+      "default": "./next.js"
+    },
+    "./react": {
+      "types": "./react.d.ts",
+      "default": "./react.js"
+    }
   },
   "peerDependencies": {
     "eslint": "^9.0.0"

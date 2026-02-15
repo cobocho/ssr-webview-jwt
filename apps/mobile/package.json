@@ -1,5 +1,5 @@
 {
-  "name": "jwt-mobile",
+  "name": "@ssr-webview-jwt/mobile",
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
@@ -9,6 +9,9 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint"
+  },
+  "exports": {
+    "types": "./src/lib/bridge.ts"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",

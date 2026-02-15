@@ -63,6 +63,8 @@ auth.post('/refresh', async (c) => {
     return c.json({ message: 'Refresh token not found' }, 401);
   }
 
+  console.log('refresh token', token);
+
   try {
     const payload = await verifyRefreshToken(token);
     const sub = payload.sub;
@@ -79,7 +81,8 @@ auth.post('/refresh', async (c) => {
 
     return c.json(buildTokenResponse(newAccessToken, newRefreshToken));
   } catch {
-    return c.json({ message: 'Invalid or expired refresh token' }, 401);
+    console.log('invalid or expired refresh token at refresh endpoint');
+    return c.json({ message: 'Invalid or expired refresh token at refresh endpoint' }, 401);
   }
 });
 
@@ -91,6 +94,7 @@ auth.get('/protected', async (c) => {
   const authHeader = c.req.header('Authorization');
 
   if (!authHeader?.startsWith('Bearer ')) {
+    console.log('authorization header missing');
     return c.json({ message: 'Authorization header missing' }, 401);
   }
 
@@ -100,7 +104,8 @@ auth.get('/protected', async (c) => {
     const payload = await verifyAccessToken(token);
     return c.json({ message: 'Access granted', user: payload.sub });
   } catch {
-    return c.json({ message: 'Invalid or expired access token' }, 401);
+    console.log('invalid or expired access token at protected endpoint');
+    return c.json({ message: 'Invalid or expired access token at protected endpoint' }, 401);
   }
 });
 
