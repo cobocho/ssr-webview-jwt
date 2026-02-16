@@ -6,13 +6,6 @@ import { STORAGE_KEYS } from '../constants/storage';
 import { BASE_URL } from '../constants/url';
 import { appBridge } from './bridge';
 
-let refreshPromise: Promise<{
-  accessToken: string;
-  accessTokenExpiresAt: number;
-  refreshToken: string;
-  refreshTokenExpiresAt: number;
-} | null> | null = null;
-
 export const getRefreshToken = async () => {
   const refreshToken = await SecureStore.getItemAsync('refreshToken');
 
@@ -31,8 +24,6 @@ export const getRefreshToken = async () => {
         refreshTokenExpiresIn: number;
       }>();
 
-    console.log('Refreshed');
-
     SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, response.refreshToken);
 
     return {
@@ -42,10 +33,17 @@ export const getRefreshToken = async () => {
       refreshTokenExpiresAt: response.refreshTokenExpiresIn,
     };
   } catch (error) {
-    console.error('토큰 갱신 실패', error);
+    console.error('Token refresh failed', error);
     return null;
   }
 };
+
+let refreshPromise: Promise<{
+  accessToken: string;
+  accessTokenExpiresAt: number;
+  refreshToken: string;
+  refreshTokenExpiresAt: number;
+} | null> | null = null;
 
 export const httpClient = ky.create({
   prefixUrl: BASE_URL,

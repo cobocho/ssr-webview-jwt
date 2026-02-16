@@ -23,7 +23,7 @@ const MAX_REFRESH_RETRIES = 2;
 const REFRESH_RETRY_DELAY_MS = 1000;
 const REFRESH_INTERVAL_MS = ACCESS_TOKEN_EXPIRATION_TIME - 1000;
 
-const STORAGE_KEYS = {
+const COOKIE_KEYS = {
   ACCESS_TOKEN: 'accessToken',
   REFRESH_TOKEN: 'refreshToken',
 } as const;
@@ -53,7 +53,7 @@ export function useAuth(): AuthContextValue {
 }
 
 async function clearAuthCookies(): Promise<void> {
-  await NitroCookies.clearByNameSync(WEBVIEW_BASE_URL, STORAGE_KEYS.ACCESS_TOKEN);
+  await NitroCookies.clearByNameSync(WEBVIEW_BASE_URL, COOKIE_KEYS.ACCESS_TOKEN);
 }
 
 async function syncCookies(token: TokenResponse): Promise<void> {
@@ -62,13 +62,11 @@ async function syncCookies(token: TokenResponse): Promise<void> {
     return;
   }
 
-  console.log('syncCookies', token);
-
   await Promise.all([
     NitroCookies.set(
       WEBVIEW_BASE_URL,
       {
-        name: STORAGE_KEYS.ACCESS_TOKEN,
+        name: COOKIE_KEYS.ACCESS_TOKEN,
         value: token.accessToken,
         path: '/',
         expires: new Date(token.accessTokenExpiresAt).toUTCString(),
