@@ -2,8 +2,6 @@
 
 A sample monorepo demonstrating stable JWT management in a **React Native WebView + Next.js SSR** environment.
 
-> Companion code for the blog post: [Using JWT Reliably in a Next.js WebView Environment](./next-js-webview-jwt.md)
-
 ---
 
 ## Overview
