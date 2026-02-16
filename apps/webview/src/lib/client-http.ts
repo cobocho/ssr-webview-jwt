@@ -1,19 +1,22 @@
+'use client';
+
 import { Api } from '@ssr-webview-jwt/api';
 import ky from 'ky';
 
-import { BASE_URL } from '@/constants/url';
+import { CLIENT_BASE_URL } from '@/constants/url';
 
 import { bridge } from '../providers/bridge-provider';
 
 let refreshPromise: Promise<string> | null = null;
 
 export const clientHttp = ky.create({
-  prefixUrl: BASE_URL,
+  prefixUrl: CLIENT_BASE_URL,
   hooks: {
     beforeRequest: [
       async (request) => {
-        const token = await bridge.getAccessToken();
+        if (typeof window === 'undefined') return;
 
+        const token = await bridge.getAccessToken();
         if (!request.headers.get('Authorization') && token?.accessToken) {
           request.headers.set('Authorization', `Bearer ${token.accessToken}`);
         }
@@ -21,6 +24,8 @@ export const clientHttp = ky.create({
     ],
     afterResponse: [
       async (request, options, response) => {
+        if (typeof window === 'undefined') return;
+
         if (response.status !== 401) {
           return response;
         }

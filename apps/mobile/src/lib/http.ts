@@ -31,6 +31,8 @@ export const getRefreshToken = async () => {
         refreshTokenExpiresIn: number;
       }>();
 
+    console.log('Refreshed');
+
     SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, response.refreshToken);
 
     return {

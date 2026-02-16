@@ -19,7 +19,7 @@ export function BridgedWebView({ uri, style, ...props }: BridgedWebViewProps) {
 
   const webviewRef = useRef<WebViewType>(null);
 
-  const [, setKey] = useState(0);
+  const [key, setKey] = useState(0);
 
   if (!initialized) {
     return null;
@@ -27,25 +27,36 @@ export function BridgedWebView({ uri, style, ...props }: BridgedWebViewProps) {
 
   return (
     <WebView
+      key={key}
       source={{
         uri,
       }}
       sharedCookiesEnabled={true}
-      thirdPartyCookiesEnabled={true} // Android에서 필요할 때가 많음
+      thirdPartyCookiesEnabled={true}
       javaScriptEnabled={true}
       domStorageEnabled={true}
       bounces={false}
       overScrollMode="never"
       setBuiltInZoomControls={false}
-      nestedScrollEnabled={false}
       mixedContentMode="always"
-      scrollEnabled={false}
+      nestedScrollEnabled={false}
+      scrollEnabled={true}
       originWhitelist={['*']}
       ref={webviewRef}
       setSupportMultipleWindows={false}
       onContentProcessDidTerminate={() => {
         // iOS
         webviewRef.current?.reload();
+      }}
+      onMessage={(event) => {
+        try {
+          const data = JSON.parse(event.nativeEvent.data);
+          if (data.type === 'reload') {
+            setKey((k) => k + 1);
+          }
+        } catch (error) {
+          console.error('Error parsing message:', error);
+        }
       }}
       onRenderProcessGone={() => {
         // Android

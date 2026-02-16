@@ -63,8 +63,6 @@ auth.post('/refresh', async (c) => {
     return c.json({ message: 'Refresh token not found' }, 401);
   }
 
-  console.log('refresh token', token);
-
   try {
     const payload = await verifyRefreshToken(token);
     const sub = payload.sub;

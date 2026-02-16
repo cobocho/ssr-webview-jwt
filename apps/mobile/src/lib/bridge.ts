@@ -1,5 +1,7 @@
 import type { JWTPayload } from '@ssr-webview-jwt/api';
 import { type Bridge, bridge } from '@webview-bridge/react-native';
+import { type Href, router } from 'expo-router';
+import type { NavigationOptions } from 'expo-router/build/global-state/routing';
 import * as SecureStore from 'expo-secure-store';
 import { jwtDecode } from 'jwt-decode';
 
@@ -22,7 +24,10 @@ interface AppBridgeState extends Bridge {
     accessTokenExpiresAt: number;
     refreshTokenExpiresAt: number;
   } | null>;
+  logout: () => Promise<void>;
   clearToken: () => Promise<void>;
+  navigateTo: (path: Href, options?: NavigationOptions) => Promise<void>;
+  goBack: () => Promise<void>;
 }
 
 export const appBridge = bridge<AppBridgeState>(({ get, set }) => {
@@ -97,8 +102,20 @@ export const appBridge = bridge<AppBridgeState>(({ get, set }) => {
       };
     },
     clearToken: async () => {
-      await SecureStore.deleteItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
       await SecureStore.deleteItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
+    },
+    navigateTo: async (path: Href, options?: NavigationOptions) => {
+      router.push(path, options);
+    },
+    goBack: async () => {
+      router.back();
+    },
+    logout: async () => {
+      await SecureStore.deleteItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
+      set({
+        token: null,
+      });
+      router.replace('/login');
     },
   };
 });

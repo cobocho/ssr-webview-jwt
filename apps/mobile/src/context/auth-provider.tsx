@@ -10,9 +10,9 @@ import {
   useRef,
   useState,
 } from 'react';
+import { Platform } from 'react-native';
 import NitroCookies from 'react-native-nitro-cookies';
 
-import { ACCESS_TOKEN_EXPIRATION_TIME } from '../constants/token';
 import { WEBVIEW_BASE_URL } from '../constants/url';
 import { appBridge } from '../lib/bridge';
 import { getRefreshToken } from '../lib/http';
@@ -50,7 +50,7 @@ export function useAuth(): AuthContextValue {
 }
 
 async function clearAuthCookies(): Promise<void> {
-  NitroCookies.clearAll();
+  await NitroCookies.clearByNameSync(WEBVIEW_BASE_URL, STORAGE_KEYS.ACCESS_TOKEN);
 }
 
 async function syncCookies(token: TokenResponse): Promise<void> {
@@ -66,13 +66,13 @@ async function syncCookies(token: TokenResponse): Promise<void> {
       path: '/',
       expires: new Date(token.accessTokenExpiresAt).toUTCString(),
       secure: false,
-      httpOnly: false,
+      httpOnly: true,
     }),
     NitroCookies.set(WEBVIEW_BASE_URL, {
-      name: STORAGE_KEYS.REFRESH_TOKEN,
-      value: token.refreshToken,
+      name: 'Platform',
+      value: Platform.OS,
       path: '/',
-      expires: new Date(token.refreshTokenExpiresAt).toUTCString(),
+      expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30).toUTCString(),
       secure: false,
       httpOnly: false,
     }),
@@ -105,6 +105,7 @@ async function refreshTokenWithRetry(): Promise<TokenResponse | null> {
       await delay(REFRESH_RETRY_DELAY_MS);
     }
   }
+
   return null;
 }
 
@@ -116,6 +117,7 @@ async function applyToken(
     accessToken: tokenResponse.accessToken,
     refreshToken: tokenResponse.refreshToken,
   });
+
   await syncCookies(tokenResponse);
 }
 
@@ -128,21 +130,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }));
 
   const [initialized, setInitialized] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  const isAuthenticated = useMemo(
+    () => !!(token?.accessToken && token?.refreshToken),
+    [token?.accessToken, token?.refreshToken],
+  );
 
   const hasBootstrapped = useRef(false);
   const skipNextSyncRef = useRef(false);
 
   const clearSession = useCallback(async () => {
     await Promise.all([clearToken(), clearAuthCookies()]);
-    setIsAuthenticated(false);
   }, [clearToken]);
 
   const login = useCallback(
     async (tokenResponse: TokenResponse) => {
       skipNextSyncRef.current = true;
       await applyToken(tokenResponse, setToken);
-      setIsAuthenticated(true);
     },
     [setToken],
   );
@@ -164,18 +168,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       (async () => {
         try {
           const storedRefreshToken = await getRefreshToken();
-
           if (!storedRefreshToken) {
             setInitialized(true);
             return;
           }
 
           const refreshedToken = await refreshTokenWithRetry();
-
           if (refreshedToken) {
             skipNextSyncRef.current = true;
             await applyToken(refreshedToken, setToken);
-            setIsAuthenticated(true);
           } else {
             console.warn('[Auth] Bootstrap refresh failed — clearing session');
             await clearSession();
@@ -194,7 +195,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(
     function syncWebViewCookies() {
       if (!initialized) return;
-
       if (skipNextSyncRef.current) {
         skipNextSyncRef.current = false;
         return;
@@ -202,18 +202,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       (async () => {
         try {
-          if (!token) {
-            await clearSession();
-            return;
-          }
-
-          if (!token.accessToken || !token.refreshToken) {
+          if (!token?.accessToken || !token?.refreshToken) {
             await clearSession();
             return;
           }
 
           await syncCookies(token);
-          setIsAuthenticated(true);
+          // setIsAuthenticated 제거
           appBridge.setState({ token });
         } catch (error) {
           console.error('[Auth] Sync failed:', error);
@@ -222,26 +217,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     },
     [initialized, token, clearSession],
   );
-
-  const handleRefresh = useCallback(async () => {
-    const newToken = await refreshTokenWithRetry();
-
-    if (newToken) {
-      setToken(newToken);
-      return;
-    }
-
-    console.error('[Auth] Periodic refresh failed — logging out');
-    await logout();
-  }, [setToken, logout]);
-
-  useEffect(() => {
-    if (!token?.refreshToken) return;
-
-    const intervalId = setInterval(handleRefresh, ACCESS_TOKEN_EXPIRATION_TIME - 1000);
-
-    return () => clearInterval(intervalId);
-  }, [token?.refreshToken, handleRefresh]);
 
   const contextValue = useMemo(
     () => ({ initialized, isAuthenticated, login, logout }),

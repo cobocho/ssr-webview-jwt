@@ -7,6 +7,8 @@ export default function AuthLayout() {
     <AuthGuard>
       <Stack>
         <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="post/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="user/[id]" options={{ headerShown: false }} />
       </Stack>
     </AuthGuard>
   );
